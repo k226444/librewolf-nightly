@@ -3,7 +3,9 @@ patches/context-menu.patch
 patches/disable-data-reporting-at-compile-time.patch
 patches/mozilla-vpn-ad.patch
 patches/mozilla_dirs.patch
+patches/mozilla-kde.patch
 patches/remove_addons.patch
+patches/unity-menubar.patch
 patches/sed-patches/allow-searchengines-non-esr.patch
 patches/sed-patches/disable-pocket.patch
 patches/sed-patches/remove-internal-plugin-certs.patch
