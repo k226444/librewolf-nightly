@@ -9,7 +9,6 @@ import os
 import sys
 import optparse
 import time
-import glob
 
 
 #
@@ -99,17 +98,13 @@ def librewolf_patches():
     exec('cp -v ../assets/search-config.json services/settings/dumps/main/search-config.json')
 
     # read lines of .txt file into 'patches'
-    f = open('../assets/patches.txt'.format(version), "r")
-    lines = f.readlines()
-    f.close()
-    patches = []
-    for line in lines:
-        patches.append('../'+line)
+    with open('../assets/patches.txt'.format(version), "r") as f:
+        for line in f.readlines():
+            patch('../'+line)
 
-        
-    for p in patches:
-        patch(p)
-
+    # apply xmas.patch seperately because not all builders use this repo the same way, and
+    # we don't want to disturbe those workflows.
+    patch('../patches/xmas.patch')
 
     #
     # Create the 'lw' folder, it contains the librewolf.cfg and policies.json files.
@@ -117,29 +112,20 @@ def librewolf_patches():
     
     exec('mkdir -p lw')
     
-    # insert the settings pane source (experimental)
-    exec('rm -rf librewolf-pref-pane')
-    exec('git clone https://gitlab.com/librewolf-community/browser/librewolf-pref-pane.git')
-    os.chdir('librewolf-pref-pane')
-    exec('git diff 1fee314adc81000294fc0cf3196a758e4b64dace > ../lw/librewolf-pref-pane.patch')
-    os.chdir('..')        
-    exec('rm -rf librewolf-pref-pane')
+    # getting the librewolf settings repository
+    exec("cp -v ../submodules/settings/defaults/pref/local-settings.js lw/")
+    exec("cp -v ../submodules/settings/distribution/policies.json lw/")
+    exec("cp -v ../submodules/settings/librewolf.cfg lw/")
+
     
-    patch('lw/librewolf-pref-pane.patch')
-    exec('rm -f lw/librewolf-pref-pane.patch')
+    # provide a script that fetches and bootstraps Nightly and some mozconfigs
+    exec('cp -v ../scripts/mozfetch.sh lw/')
+    exec('cp -v ../assets/mozconfig.new ../assets/mozconfig.new.without-wasi ../scripts/setup-wasi-linux.sh lw/')
 
-
-        
-    ##! This is the moment in time we grab the Settings repo HEAD revision
-    exec('git clone https://gitlab.com/librewolf-community/settings.git')
-    exec("cp -v settings/defaults/pref/local-settings.js lw/")
-    exec("cp -v settings/distribution/policies.json lw/")
-    exec("cp -v settings/librewolf.cfg lw/")
-    exec('rm -rf settings')
-
-    # provide a script that fetches and bootstraps Nightly
-    exec('cp -v ../scripts/mozfetch.sh lw')
-    exec('cp -v ../assets/mozconfig.new ../assets/mozconfig.new.without-wasi ../scripts/setup-wasi-linux.sh lw')
+    # override the firefox version
+    for file in ["browser/config/version.txt", "browser/config/version_display.txt"]:
+        with open(file, "w") as f:
+            f.write("{}-{}".format(version,release))
     
     leave_srcdir()
 
@@ -149,10 +135,11 @@ def librewolf_patches():
 # Main functionality in this script.. which is to call librewolf_patches()
 #
 
-if len(args) != 1:
-    sys.stderr.write('error: please specify version of librewolf source')
+if len(args) != 2:
+    sys.stderr.write('error: please specify version and release of librewolf source')
     sys.exit(1)
 version = args[0]
+release = args[1]
 if not os.path.exists('librewolf-{}'.format(version) + '/configure.py'):
     sys.stderr.write('error: folder doesn\'t look like a Firefox folder.')
     sys.exit(1)

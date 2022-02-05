@@ -1,136 +1,75 @@
-## Building LibreWolf from source:
+## LibreWolf build instructions
 
-First, let's **[download the latest tarball](https://gitlab.com/librewolf-community/browser/source/-/jobs/artifacts/main/raw/librewolf-96.0.1-1.source.tar.gz?job=build-job)**. This tarball is the latest produced by the [CI](https://gitlab.com/librewolf-community/browser/source/-/jobs).
-
-To download the latest from a script, use wget/curl like this:
+First, let's **[download the latest tarball](https://gitlab.com/librewolf-community/browser/source/-/jobs/artifacts/main/raw/librewolf-96.0.3-2.source.tar.gz?job=Build)**. This tarball is the latest produced by the [CI](https://gitlab.com/librewolf-community/browser/source/-/jobs).
 ```
-wget -O librewolf-96.0.1-1.source.tar.gz https://gitlab.com/librewolf-community/browser/source/-/jobs/artifacts/main/raw/librewolf-96.0.1-1.source.tar.gz?job=build-job
-curl -L -o librewolf-96.0.1-1.source.tar.gz https://gitlab.com/librewolf-community/browser/source/-/jobs/artifacts/main/raw/librewolf-96.0.1-1.source.tar.gz?job=build-job
+tar xf <tarball>
+cd <folder>
+make bootstrap build package run
 ```
+#### How to make a patch:
 
-Next, we create ourselves a build folder and extract the tarball.
-
+The easiest way to make patches is to go to the LibreWolf source folder:
 ```
-mkdir build
-cd build
-tar xf ../librewolf-96.0.1-1.source.tar.gz
+cd librewolf-$(cat version)
+git init
+git add <path_to_file_you_changed>
+git commit -am initial-commit
+git diff > ../mypatch.patch
 ```
+We have Gitter / Matrix rooms, and on the website we have links to the various issue trackers.
 
-### build environment
+#### Building LibreWolf with git:
 
-Next step, if you have not done so already, you must _create the build environment_:
+1. Clone the git repository via https:
 ```
-./librewolf-96.0.1/lw/mozfetch.sh
+git clone --recursive https://gitlab.com/librewolf-community/browser/source.git
 ```
-This would create a _mozilla-unified_ folder in our 'build' folder, or basically anywhere that is your current working directory. It takes about an hour for me to complete, but it needs to be done only once. This step might fail and cause problems. Hack a bit, and if that fails you can ask on our [Gitter](https://gitter.im/librewolf-community/librewolf)/[Matrix](https://matrix.to/#/#librewolf:matrix.org) channels. There is no need to actually build _mozilla-unified_ (Mozilla Nightly) itself, nor is the folder needed to build LibreWolf. So you can remove it: `rm -rf mozilla-unfied` if you don't plan on using/exploring it.
-
-#### wasi sdk
-
-Since Firefox 95.0, we need to install an additional library, the **'wasi sdk'**. This library sandboxes wasm libraries, which is what we want, but it's still experimental for us to include properly.
-
-A few resources: 
-* mozilla.org: [WebAssembly and Back Again: Fine-Grained Sandboxing in Firefox 95](https://hacks.mozilla.org/2021/12/webassembly-and-back-again-fine-grained-sandboxing-in-firefox-95/).
-* [Compiling C to WebAssembly using clang/LLVM and WASI](https://00f.net/2019/04/07/compiling-to-webassembly-with-llvm-and-clang/).
-* [Firefox 95 on POWER](https://www.talospace.com/2021/12/firefox-95-on-power.html).
-
-To setup the wasi sdk _headers_, you can use _librewolf-96.0.1/lw/setup-wasi-linux.sh_. Please note that this script is a bit experimental and not all kinks have been worked out, but it should work.
-This might not be enough on all systems. Some systems have the wasi-libc library already installed, and some don't. It depends on the installed version of Clang/LLVM it seems, which should be v8 or above. On debian-based systems: `sudo apt install wasi-libc`, on Arch: `https://archlinux.org/packages/community/any/wasi-libc/` (`pacman -Syu wasi-libc`). Instructions for macos/windows and perhaps other Linux distro's will be added here soon.
-
-Or, the other option is to not use these sandbox libraries: In this case we can't use our standard _mozconfig_ symlink from _mozconfig.new_ into _mozconfig.new.without-wasi_. In that case you have to type something along the lines of:
+or Git:
 ```
-cd librewolf-96.0.1
-cp lw/mozconfig.new.without-wasi mozconfig
-cd ..
+git clone --recursive git@gitlab.com:librewolf-community/browser/source.git
 ```
-### building librewolf
+cd into it, build the LibreWolf tarball, bootstrap the build environment, and finally, perform the build:
+```
+cd source
+make all
+make bootstrap
+make build
+```
+After that, you can either build a tarball from it, or run it:
+```
+make package
+make run
+```
+#### How to create a patch for problems in Mozilla's [Bugzilla](https://bugzilla.mozilla.org/).
 
-Now we're ready to actually build LibreWolf:
+Well, first of all:
+
+* [Create an account](https://bugzilla.mozilla.org/createaccount.cgi).
+* Handy link: [Bugs Filed Today](https://bugzilla.mozilla.org/buglist.cgi?cmdtype=dorem&remaction=run&namedcmd=Bugs%20Filed%20Today&sharer_id=1&list_id=15939480).
+* The essential: [Firefox Source Tree Documentation](https://firefox-source-docs.mozilla.org/).
+
+Now that you have a patch in LibreWolf, that's not enough to upload to Mozilla. See, Mozilla only accepts patches against Nightly. So here is how to do that:
 ```
-cd librewolf-96.0.1
+hg clone https://hg.mozilla.org/mozilla-unified
+cd mozilla-unified
+hg update
+MOZBUILD_STATE_PATH=$HOME/.mozbuild ./mach --no-interactive bootstrap --application-choice=browser
 ./mach build
-```
-Also takes me an hour. Then, we can run it:
-```
 ./mach run
 ```
-Or make a package:
+Now you can apply your patch to Nightly:
 ```
-./mach package
+patch -p1 -i ../mypatch.patch
 ```
+Now you let Mercurial create the patch:
+```
+hg diff > ../my-nightly-patch.patch
+```
+And it can be uploaded to Bugzilla.
 
-### I want to keep up to date with the latest, but compile myself
+##### *(copy of Mozilla readme)* Now the fun starts
 
-1. To first clone the repo:
-```
-git clone https://gitlab.com/librewolf-community/browser/source.git
-cd source
-make librewolf
-```
-2. To keep up-to-date:
-```
-git pull
-make librewolf
-```
+Time to start hacking! You should join us on [Matrix](https://chat.mozilla.org/), say hello in the [Introduction channel](https://chat.mozilla.org/#/room/#introduction:mozilla.org), and [find a bug to start working on](https://codetribute.mozilla.org/). See the [Firefox Contributors’ Quick Reference](https://firefox-source-docs.mozilla.org/contributing/contribution_quickref.html#firefox-contributors-quick-reference) to learn how to test your changes, send patches to Mozilla, update your source code locally, and more.
 
-## [dev info] How to use this repo instead of [Common](https://gitlab.com/librewolf-community/browser/common):
-
-Since the dawn of time, we have used **Common** to get _patches_, _source_files_, including _source_files/{branding}_
-
-This source repo supports all that, because it uses these same things to produce the tarball. As far as I can tell, the mapping from Common to Source would be:
-
-* _[patches](https://gitlab.com/librewolf-community/browser/common/-/tree/master/patches)_ -> _[patches](https://gitlab.com/librewolf-community/browser/source/-/tree/main/patches)_
-* _[source\_files](https://gitlab.com/librewolf-community/browser/common/-/tree/master/source_files)/search-config.json_ -> _[assets](https://gitlab.com/librewolf-community/browser/source/-/tree/main/assets)/search-config.json_
-* _source\_files/browser/[branding](https://gitlab.com/librewolf-community/browser/common/-/tree/master/source_files/browser/branding)/librewolf_ -> _themes/browser/[branding](https://gitlab.com/librewolf-community/browser/source/-/tree/main/themes/browser/branding)/librewolf_
-
-
-With this mapping, I hope that other builders that can't use our tarball (afterMozilla project, weird distro's), still use the same source/patches as the builders that do use it.
-
-### Another feature
-
-The file [assets/patches.txt](https://gitlab.com/librewolf-community/browser/source/-/blob/main/assets/patches.txt) defines what patches go in. These are not the only patches a builder will use, weird distro's etc, will use additional patches. those patches can live in the repo of that distro, or in a subfolder here. I hope this gives everybody the freedom to build anyway they please, like in Common, but with the added benefit that we produce a source tarball.
-
-### Implementing a build script the new way:
-
-The repository has a short [example shell script](https://gitlab.com/librewolf-community/browser/source/-/blob/main/scripts/fetch-build.sh) on how to use the new-style tarball approach instead of the older patching-it-yourself approach.
-
-## [dev info] Building the LibreWolf source tarball:
-
-Luckly, you don't need the build environment for this. If you don't have write access, just:
-```
-git clone https://gitlab.com/librewolf-community/browser/source.git
-cd source
-make all
-```
-If you **do** have write access, we're first gonna check for a newer version of Firefox:
-```
-git clone git@gitlab.com:librewolf-community/browser/source.git
-cd source
-make check
-```
-If there is a new version, it's a good time to git commit and trigger a CI build job.
-```
-git commit -am v$(cat version)-$(cat release) && git push
-```
-To build the source archive:
-```
-make all
-```
-If you have a working build environment, you can build librewolf with:
-```
-make librewolf
-```
-This extracts the source, and then tries to `./mach build && ./mach package`.
-
-
-## FAQ: Common issues when setting up the Mozilla build environment
-
-1. it doesnt find a suitable python.
-```
-export MACH_USE_SYSTEM_PYTHON=1
-make librewolf
-```
-2. <python-package-1> requires <python-package-2, which is not installed.
-```
-pip3 install <python-package-2>
-```
-And retry.
+#### Hey, I'm using a Mac or Windows :(
+We understand, life isn't always fair 😺. The same steps as above do apply, you'll just have to walk through the beginning part of the guides for [MacOS](https://firefox-source-docs.mozilla.org/setup/macos_build.html), [Windows](https://firefox-source-docs.mozilla.org/setup/windows_build.html).
