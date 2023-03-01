@@ -1,30 +1,4 @@
-From 058054ef4648971a4cf72fa5f42553786df7336a Mon Sep 17 00:00:00 2001
-From: ohfp <1813007-ohfp@users.noreply.gitlab.com>
-Date: Tue, 12 Apr 2022 11:57:53 +0200
-Subject: [PATCH] port pref-pane patch changes to gecko-dev
-
-fix xorigin pref init and handling
-
-[LW] Ask to Restart Browser if Sync Pref in LW Settings is changed
----
- browser/components/preferences/jar.mn         |   1 +
- .../preferences/librewolf.inc.xhtml           | 254 ++++++++++++++++
- browser/components/preferences/librewolf.js   | 287 ++++++++++++++++++
- browser/components/preferences/preferences.js |   2 +
- .../components/preferences/preferences.xhtml  |  13 +
- .../en-US/browser/preferences/preferences.ftl |  95 ++++++
- browser/themes/shared/jar.inc.mn              |   2 +
- .../shared/preferences/category-librewolf.svg |  96 ++++++
- .../themes/shared/preferences/librewolf.css   |  23 ++
- .../themes/shared/preferences/preferences.css |   4 +
- 10 files changed, 777 insertions(+)
- create mode 100644 browser/components/preferences/librewolf.inc.xhtml
- create mode 100644 browser/components/preferences/librewolf.js
- create mode 100644 browser/themes/shared/preferences/category-librewolf.svg
- create mode 100644 browser/themes/shared/preferences/librewolf.css
-
 diff --git a/browser/components/preferences/jar.mn b/browser/components/preferences/jar.mn
-index 2131a15ceef7..0b97dc14b42e 100644
 --- a/browser/components/preferences/jar.mn
 +++ b/browser/components/preferences/jar.mn
 @@ -11,6 +11,7 @@ browser.jar:
@@ -37,7 +11,6 @@ index 2131a15ceef7..0b97dc14b42e 100644
     content/browser/preferences/experimental.js
 diff --git a/browser/components/preferences/librewolf.inc.xhtml b/browser/components/preferences/librewolf.inc.xhtml
 new file mode 100644
-index 000000000000..c2dfea6d0858
 --- /dev/null
 +++ b/browser/components/preferences/librewolf.inc.xhtml
 @@ -0,0 +1,254 @@
@@ -297,7 +270,6 @@ index 000000000000..c2dfea6d0858
 +</html:template>
 diff --git a/browser/components/preferences/librewolf.js b/browser/components/preferences/librewolf.js
 new file mode 100644
-index 000000000000..c8cbb075d59b
 --- /dev/null
 +++ b/browser/components/preferences/librewolf.js
 @@ -0,0 +1,287 @@
@@ -589,7 +561,6 @@ index 000000000000..c8cbb075d59b
 +  });
 +});
 diff --git a/browser/components/preferences/preferences.js b/browser/components/preferences/preferences.js
-index 19dda7cf39eb..f5e67b637b49 100644
 --- a/browser/components/preferences/preferences.js
 +++ b/browser/components/preferences/preferences.js
 @@ -8,6 +8,7 @@
@@ -600,7 +571,7 @@ index 19dda7cf39eb..f5e67b637b49 100644
  /* import-globals-from sync.js */
  /* import-globals-from experimental.js */
  /* import-globals-from moreFromMozilla.js */
-@@ -196,6 +197,7 @@ function init_all() {
+@@ -198,6 +199,7 @@ function init_all() {
    register_module("paneHome", gHomePane);
    register_module("paneSearch", gSearchPane);
    register_module("panePrivacy", gPrivacyPane);
@@ -609,7 +580,6 @@ index 19dda7cf39eb..f5e67b637b49 100644
    if (Services.prefs.getBoolPref("browser.preferences.experimental")) {
      // Set hidden based on previous load's hidden value.
 diff --git a/browser/components/preferences/preferences.xhtml b/browser/components/preferences/preferences.xhtml
-index 6ee14eec9b2e..a0d768dce307 100644
 --- a/browser/components/preferences/preferences.xhtml
 +++ b/browser/components/preferences/preferences.xhtml
 @@ -13,6 +13,7 @@
@@ -620,7 +590,15 @@ index 6ee14eec9b2e..a0d768dce307 100644
  
  <!DOCTYPE html>
  
-@@ -129,6 +130,17 @@
+@@ -33,6 +34,7 @@
+   <link rel="localization" href="browser/branding/sync-brand.ftl"/>
+   <link rel="localization" href="browser/browser.ftl"/>
+   <link rel="localization" href="browser/preferences/preferences.ftl"/>
++  <link rel="localization" href="librewolf/preferences.ftl"/>
+   <link rel="localization" href="browser/preferences/moreFromMozilla.ftl"/>
+   <!-- Used by fontbuilder.js -->
+   <link rel="localization" href="browser/preferences/fonts.ftl"/>
+@@ -131,6 +133,17 @@
            <label class="category-name" flex="1" data-l10n-id="pane-privacy-title"></label>
          </richlistitem>
  
@@ -638,7 +616,7 @@ index 6ee14eec9b2e..a0d768dce307 100644
          <richlistitem id="category-sync"
                        class="category"
                        hidden="true"
-@@ -207,6 +219,7 @@
+@@ -209,6 +222,7 @@
  #include home.inc.xhtml
  #include search.inc.xhtml
  #include privacy.inc.xhtml
@@ -647,10 +625,9 @@ index 6ee14eec9b2e..a0d768dce307 100644
  #include sync.inc.xhtml
  #include experimental.inc.xhtml
 diff --git a/browser/locales/en-US/browser/preferences/preferences.ftl b/browser/locales/en-US/browser/preferences/preferences.ftl
-index a1e414697e71..8eeb594ca17d 100644
 --- a/browser/locales/en-US/browser/preferences/preferences.ftl
 +++ b/browser/locales/en-US/browser/preferences/preferences.ftl
-@@ -1420,3 +1420,98 @@ httpsonly-radio-disabled =
+@@ -1431,3 +1431,8 @@ httpsonly-radio-disabled =
  desktop-folder-name = Desktop
  downloads-folder-name = Downloads
  choose-download-folder-title = Choose Download Folder:
@@ -659,98 +636,7 @@ index a1e414697e71..8eeb594ca17d 100644
 +#   $service-name (String) - Name of a cloud storage provider like Dropbox, Google Drive, etc...
 +save-files-to-cloud-storage =
 +    .label = Save files to { $service-name }
-+
-+## LibreWolf preferences
-+
-+# Sidebar
-+pane-librewolf-title = LibreWolf
-+category-librewolf =
-+    .tooltiptext = about:config changes, logically grouped and easily accessible
-+
-+# Main content
-+librewolf-header = LibreWolf Preferences
-+librewolf-warning-title = Heads up!
-+librewolf-warning-description = We carefully choose default settings to focus on privacy and security. When changing these settings, read the descriptions to understand the implications of those changes.
-+
-+# Page Layout
-+librewolf-general-heading = Browser Behavior
-+librewolf-extension-update-checkbox =
-+    .label = Update add-ons automatically
-+librewolf-sync-checkbox =
-+    .label = Enable Firefox Sync
-+librewolf-autocopy-checkbox =
-+    .label = Enable middle click paste
-+librewolf-styling-checkbox = 
-+    .label = Allow userChrome.css customization
-+
-+librewolf-network-heading = Networking
-+librewolf-ipv6-checkbox =
-+    .label = Enable IPv6
-+
-+librewolf-privacy-heading = Privacy
-+librewolf-xorigin-ref-checkbox =
-+    .label = Limit cross-origin referrers
-+
-+librewolf-broken-heading = Fingerprinting
-+librewolf-webgl-checkbox =
-+    .label = Enable WebGL
-+librewolf-rfp-checkbox =
-+    .label = Enable ResistFingerprinting
-+librewolf-auto-decline-canvas-checkbox =
-+    .label = Silently block canvas access requests
-+librewolf-letterboxing-checkbox =
-+    .label = Enable letterboxing
-+
-+librewolf-security-heading = Security
-+librewolf-ocsp-checkbox =
-+    .label = Enforce OCSP hard-fail
-+librewolf-goog-safe-checkbox =
-+    .label = Enable Google Safe Browsing
-+librewolf-goog-safe-download-checkbox =
-+    .label = Scan downloads
-+
-+# In-depth descriptions
-+librewolf-extension-update-description = Keep extensions up to date without manual intervention. A good choice for your security.
-+librewolf-extension-update-warning1 = If you don't review the code of your extensions before every update, you should enable this option.
-+
-+librewolf-ipv6-description = Allow { -brand-short-name } to connect using IPv6.
-+librewolf-ipv6-warning1 = Instead of blocking IPv6 in the browser, we suggest enabling the IPv6 privacy extension in your OS.
-+librewolf-ocsp-description = Prevent connecting to a website if the OCSP check cannot be performed.
-+librewolf-ocsp-warning1 = This increases security, but it will cause breakage when an OCSP server is down.
-+librewolf-sync-description = Sync your data with other browsers. Requires restart.
-+librewolf-sync-warning1 = Firefox Sync encrypts data locally before transmitting it to the server.
-+
-+librewolf-autocopy-description = Select some text to copy it, then paste it with a middle-mouse click.
-+
-+librewolf-styling-description = Enable this if you want to customize the UI with a manually loaded theme.
-+librewolf-styling-warning1 = Make sure you trust the provider of the theme.
-+
-+librewolf-xorigin-ref-description = Send a referrer only on same-origin.
-+librewolf-xorigin-ref-warning1 = This causes breakage. Additionally, even when sent referrers will still be trimmed.
-+
-+librewolf-webgl-description = WebGL is a strong fingerprinting vector.
-+librewolf-webgl-warning1 = If you need to enable it, consider using an extension like Canvas Blocker.
-+
-+librewolf-rfp-description = ResistFingerprinting is the best in class anti-fingerprinting tool.
-+librewolf-rfp-warning1 = If you need to disable it, consider using an extension like Canvas Blocker.
-+
-+librewolf-auto-decline-canvas-description = Automatically deny canvas access to websites, without prompting the user.
-+librewolf-auto-decline-canvas-warning1 = It is still possible to allow canvas access from the urlbar.
-+
-+librewolf-letterboxing-description = Letterboxing applies margins around your windows, in order to return a limited set of rounded resolutions.
-+
-+librewolf-goog-safe-description = If you are worried about malware and phishing, consider enabling it.
-+librewolf-goog-safe-warning1 = Disabled over censorship concerns but recommended for less advanced users. All the checks happen locally.
-+
-+librewolf-goog-safe-download-description = Allow Safe Browsing to scan your downloads to identify suspicious files.
-+librewolf-goog-safe-download-warning1 = All the checks happen locally.
-+
-+# Footer
-+librewolf-footer = Useful links
-+librewolf-config-link = All advanced settings (about:config)
-+librewolf-open-profile = Open user profile directory
 diff --git a/browser/themes/shared/jar.inc.mn b/browser/themes/shared/jar.inc.mn
-index 146764d56081..52326c00bdfe 100644
 --- a/browser/themes/shared/jar.inc.mn
 +++ b/browser/themes/shared/jar.inc.mn
 @@ -108,6 +108,7 @@
@@ -767,11 +653,10 @@ index 146764d56081..52326c00bdfe 100644
    skin/classic/browser/preferences/siteDataSettings.css        (../shared/preferences/siteDataSettings.css)
 +  skin/classic/browser/preferences/librewolf.css               (../shared/preferences/librewolf.css)
    skin/classic/browser/spotlight.css                           (../shared/spotlight.css)
-   skin/classic/browser/upgradeDialog/abstract.png              (../shared/upgradeDialog/abstract.png)
-   skin/classic/browser/upgradeDialog/cheers.png                (../shared/upgradeDialog/cheers.png)
+   skin/classic/browser/fxa/fxa-spinner.svg                     (../shared/fxa/fxa-spinner.svg)
+   skin/classic/browser/fxa/sync-illustration.svg               (../shared/fxa/sync-illustration.svg)
 diff --git a/browser/themes/shared/preferences/category-librewolf.svg b/browser/themes/shared/preferences/category-librewolf.svg
 new file mode 100644
-index 000000000000..8ebf2ebe19a9
 --- /dev/null
 +++ b/browser/themes/shared/preferences/category-librewolf.svg
 @@ -0,0 +1,96 @@
@@ -873,7 +758,6 @@ index 000000000000..8ebf2ebe19a9
 +
 diff --git a/browser/themes/shared/preferences/librewolf.css b/browser/themes/shared/preferences/librewolf.css
 new file mode 100644
-index 000000000000..12f926ab7018
 --- /dev/null
 +++ b/browser/themes/shared/preferences/librewolf.css
 @@ -0,0 +1,23 @@
@@ -901,10 +785,9 @@ index 000000000000..12f926ab7018
 +	fill: currentColor;
 +}
 diff --git a/browser/themes/shared/preferences/preferences.css b/browser/themes/shared/preferences/preferences.css
-index 1968b68a1245..d0da141868e2 100644
 --- a/browser/themes/shared/preferences/preferences.css
 +++ b/browser/themes/shared/preferences/preferences.css
-@@ -206,6 +206,10 @@ checkbox {
+@@ -211,6 +211,10 @@ checkbox {
    list-style-image: url("chrome://browser/skin/preferences/category-privacy-security.svg");
  }
  
@@ -915,6 +798,3 @@ index 1968b68a1245..d0da141868e2 100644
  #category-sync > .category-icon {
    list-style-image: url("chrome://browser/skin/preferences/category-sync.svg");
  }
--- 
-2.37.3
-
