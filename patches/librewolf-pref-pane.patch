@@ -272,7 +272,7 @@ diff --git a/browser/components/preferences/librewolf.js b/browser/components/pr
 new file mode 100644
 --- /dev/null
 +++ b/browser/components/preferences/librewolf.js
-@@ -0,0 +1,287 @@
+@@ -0,0 +1,288 @@
 +/* This Source Code Form is subject to the terms of the Mozilla Public
 + * License, v. 2.0. If a copy of the MPL was not distributed with this file,
 + * You can obtain one at http://mozilla.org/MPL/2.0/. */
@@ -285,6 +285,7 @@ new file mode 100644
 +  return new Localization([
 +    "branding/brand.ftl",
 +    "browser/preferences/preferences.ftl",
++    "librewolf/preferences.ftl",
 +  ]);
 +});
 +
