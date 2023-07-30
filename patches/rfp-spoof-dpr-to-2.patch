@@ -1,0 +1,13 @@
+diff --git a/dom/base/nsGlobalWindowInner.cpp b/dom/base/nsGlobalWindowInner.cpp
+index 3a97351..c15f9a4 100644
+--- a/dom/base/nsGlobalWindowInner.cpp
++++ b/dom/base/nsGlobalWindowInner.cpp
+@@ -3616,7 +3616,7 @@ double nsGlobalWindowInner::GetDevicePixelRatio(CallerType aCallerType,
+     nsAutoCString origin;
+     nsresult rv = this->GetPrincipal()->GetOrigin(origin);
+     if (NS_FAILED(rv) || origin != "resource://pdf.js"_ns) {
+-      return 1.0;
++      return 2.0;
+     }
+   }
+ 
