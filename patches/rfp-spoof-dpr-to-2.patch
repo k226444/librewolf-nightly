@@ -1,3 +1,16 @@
+diff --git a/browser/app/profile/firefox.js b/browser/app/profile/firefox.js
+index 55ea93a..fe40ba6 100644
+--- a/browser/app/profile/firefox.js
++++ b/browser/app/profile/firefox.js
+@@ -24,6 +24,8 @@ pref("librewolf.firefoxView.hideTabPickup", false);
+ pref("librewolf.firefoxView.hideColorways", true);
+ pref("librewolf.uBO.assetsBootstrapLocation", "");
+ pref("librewolf.aboutMenu.checkVersion", false);
++pref("librewolf.testingOnly.overrideRfpDevicelPixelRatio", true);
++
+ pref("browser.hiddenWindowChromeURL", "chrome://browser/content/hiddenWindowMac.xhtml");
+ 
+ // Enables some extra Extension System Logging (can reduce performance)
 diff --git a/dom/base/nsGlobalWindowInner.cpp b/dom/base/nsGlobalWindowInner.cpp
 index 3a97351..c15f9a4 100644
 --- a/dom/base/nsGlobalWindowInner.cpp
@@ -8,6 +21,20 @@ index 3a97351..c15f9a4 100644
      if (NS_FAILED(rv) || origin != "resource://pdf.js"_ns) {
 -      return 1.0;
 +      return 2.0;
+     }
+   }
+diff --git a/dom/base/nsGlobalWindowInner.cpp b/dom/base/nsGlobalWindowInner.cpp
+index f81c908..b1299b4 100644
+--- a/dom/base/nsGlobalWindowInner.cpp
++++ b/dom/base/nsGlobalWindowInner.cpp
+@@ -3504,6 +3504,9 @@ double nsGlobalWindowInner::GetDevicePixelRatio(CallerType aCallerType,
+     nsAutoCString origin;
+     nsresult rv = this->GetPrincipal()->GetOrigin(origin);
+     if (NS_FAILED(rv) || origin != "resource://pdf.js"_ns) {
++      if (Services.prefs.getBoolPref("librewolf.testingOnly.overrideRfpDevicelPixelRatio", false)) {
++        return 1.0;
++      }
+       return 2.0;
      }
    }
  
